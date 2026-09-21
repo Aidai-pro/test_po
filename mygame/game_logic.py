@@ -9,7 +9,7 @@ class NumberGame:
             self.secret_number = secret_number
             
         self.attempts_left = max_attempts
-       
+        self.is_game_over = False
 
     def make_move(self, guess):
         """
