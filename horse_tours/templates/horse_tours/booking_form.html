@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Забронировать тур — HorseTours</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 480px; }
+        h2 { color: #1e293b; font-size: 1.8rem; margin-bottom: 20px; text-align: center; }
+        .alert-error { background-color: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9rem; font-weight: 600; text-align: center; }
+        form p { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
+        input, select, textarea { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 1rem; outline: none; transition: border 0.3s; }
+        input:focus, select:focus, textarea:focus { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15); }
+        .btn-submit { width: 100%; padding: 14px; background: #2e7d32; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+        .btn-submit:hover { background: #1b5e20; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #64748b; text-decoration: none; font-weight: 600; }
+        .back-link:hover { color: #1e293b; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>📅 Бронирование тура</h2>
+        
+        {% if error_message %}
+            <div class="alert-error">
+                {{ error_message }}
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-submit">Забронировать тур</button>
+        </form>
+        <a href="{% url 'horse_tours:tour_list' %}" class="back-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>
