@@ -60,11 +60,13 @@
 <body>
 
     <header>
-        <h1> HorseTours</h1>
+        <h1>🐎 HorseTours</h1>
         <p>Незабываемые конные и пешие путешествия по самым живописным уголкам природы</p>
         <div class="btn-group">
             <a href="{% url 'horse_tours:create_booking' %}" class="btn btn-primary">📅 Забронировать тур</a>
             <a href="{% url 'horse_tours:add_comment' %}" class="btn btn-secondary">💬 Оставить отзыв</a>
+            <a href="{% url 'horse_tours:profile' %}" class="btn btn-secondary">👤 Личный кабинет</a>
+            <a href="{% url 'horse_tours:login' %}" class="btn btn-secondary">🔐 Вход / Регистрация</a>
             <a href="{% url 'horse_tours:download_report' %}" class="btn" style="background-color: #28a745; color: white;">📄 Скачать отчет Word</a>
             <a href="/admin/doc/" class="btn btn-secondary">📖 Документация (Django Docs)</a>
         </div>

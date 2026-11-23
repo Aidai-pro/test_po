@@ -1,16 +1,71 @@
+import random
+import io
+import unittest
 import docx
 from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import HttpResponse
 
 from .models import Tour, Booking, Comment, Category
-from .forms import BookingForm, CommentForm
+from .forms import BookingForm, CommentForm, RegisterForm, LoginWithCaptchaForm
 
 
 def tour_list(request):
     tours = Tour.objects.all()
     return render(request, 'horse_tours/tour_list.html', {'tours': tours})
+
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.save()
+            login(request, user)
+            return redirect('horse_tours:profile')
+    else:
+        form = RegisterForm()
+    return render(request, 'horse_tours/register.html', {'form': form})
+
+
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginWithCaptchaForm(request=request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('horse_tours:profile')
+    else:
+        form = LoginWithCaptchaForm(request=request)
+
+    # Генерируем новую математическую капчу для отображения на странице
+    a = random.randint(1, 9)
+    b = random.randint(1, 9)
+    request.session['captcha_question'] = f"{a} + {b} = ?"
+    request.session['captcha_answer'] = str(a + b)
+
+    return render(request, 'horse_tours/login.html', {
+        'form': form,
+        'captcha_question': request.session['captcha_question']
+    })
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('horse_tours:tour_list')
+
+
+@login_required
+def profile_view(request):
+    booking = Booking.objects.filter(user=request.user).first()
+    comments = Comment.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'horse_tours/profile.html', {
+        'booking': booking,
+        'comments': comments,
+    })
 
 
 @login_required
@@ -23,7 +78,7 @@ def create_booking(request):
             booking.user = request.user
             try:
                 booking.save()
-                return redirect('horse_tours:tour_list')
+                return redirect('horse_tours:profile')
             except IntegrityError:
                 error_message = "У вас уже есть активное бронирование! Один пользователь может забронировать только один тур."
     else:
@@ -39,38 +94,43 @@ def add_comment(request):
             comment = form.save(commit=False)
             comment.user = request.user
             comment.save()
-            return redirect('horse_tours:tour_list')
+            return redirect('horse_tours:profile')
     else:
         form = CommentForm()
     return render(request, 'horse_tours/comment_form.html', {'form': form})
 
 
 def download_report(request):
+    # Программно запускаем автотесты приложения horse_tours для фиксации реальных результатов
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromName('horse_tours.tests')
+    stream = io.StringIO()
+    runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+    result = runner.run(suite)
+    test_log = stream.getvalue()
+
     doc = docx.Document()
-    
-    # Заголовок
-    doc.add_heading('Отчет по проекту HorseTours', level=0)
-    
-    # Сводка
-    doc.add_heading('1. Общая статистика', level=1)
+    doc.add_heading('Отчет по тестированию и работе проекта HorseTours', level=0)
+
+    # Раздел 1: Результаты автоматического тестирования
+    doc.add_heading('1. Результаты автоматического тестирования (Auth, Captcha, Profile, DB)', level=1)
+    status_text = "УСПЕШНО (OK)" if result.wasSuccessful() else "ЕСТЬ ОШИБКИ (FAILED)"
+    doc.add_paragraph(f'Итоговый статус: {status_text}')
+    doc.add_paragraph(f'Всего выполнено тестов: {result.testsRun}')
+    doc.add_paragraph(f'Ошибок (Errors): {len(result.errors)} | Провалов (Failures): {len(result.failures)}')
+
+    doc.add_heading('Подробный протокол выполнения тестов:', level=2)
+    p_log = doc.add_paragraph(test_log)
+    p_log.style.font.name = 'Consolas'
+
+    # Раздел 2: Сводная статистика БД
+    doc.add_heading('2. Сводная статистика базы данных', level=1)
     doc.add_paragraph(f'Всего категорий: {Category.objects.count()}')
     doc.add_paragraph(f'Всего туров: {Tour.objects.count()}')
     doc.add_paragraph(f'Забронировано туров: {Booking.objects.count()}')
     doc.add_paragraph(f'Всего отзывов: {Comment.objects.count()}')
-    
-    # Связь M:M
-    doc.add_heading('2. Туры и категории (Many-to-Many)', level=1)
-    for tour in Tour.objects.all():
-        cats = ", ".join([c.name for c in tour.categories.all()])
-        doc.add_paragraph(f'• Тур: {tour.title} — {tour.price} сом | Категории: {cats or "Без категории"}')
-        
-    # Связь 1:1
-    doc.add_heading('3. Бронирования (One-to-One)', level=1)
-    for b in Booking.objects.all():
-        doc.add_paragraph(f'• Пользователь {b.user.username} забронировал тур "{b.tour.title}" на {b.booking_date}')
-        
-    # Выгрузка в браузер
+
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-    response['Content-Disposition'] = 'attachment; filename="HorseTours_Report.docx"'
+    response['Content-Disposition'] = 'attachment; filename="HorseTours_Test_Report.docx"'
     doc.save(response)
     return response
